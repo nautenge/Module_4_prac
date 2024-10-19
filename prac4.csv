@@ -1,0 +1,206 @@
+public class Order
+{
+    public List<OrderItem> Items { get; private set; } = new List<OrderItem>();
+    public IPayment PaymentMethod { get; set; }
+    public IDelivery DeliveryMethod { get; set; }
+
+    public void AddItem(string productName, int quantity, double price)
+    {
+        Items.Add(new OrderItem(productName, quantity, price));
+    }
+
+    public double CalculateTotalPrice(IDiscountCalculator discountCalculator)
+    {
+        double total = 0;
+        foreach (var item in Items)
+        {
+            total += item.Price * item.Quantity;
+        }
+        return discountCalculator.ApplyDiscount(total);
+    }
+}
+
+public class OrderItem
+{
+    public string ProductName { get; }
+    public int Quantity { get; }
+    public double Price { get; }
+
+    public OrderItem(string productName, int quantity, double price)
+    {
+        ProductName = productName;
+        Quantity = quantity;
+        Price = price;
+    }
+}
+
+
+
+public interface IPayment
+{
+    void ProcessPayment(double amount);
+}
+
+public class CreditCardPayment : IPayment
+{
+    public void ProcessPayment(double amount)
+    {
+        Console.WriteLine($"Processing credit card payment of {amount}");
+    }
+}
+
+public class PayPalPayment : IPayment
+{
+    public void ProcessPayment(double amount)
+    {
+        Console.WriteLine($"Processing PayPal payment of {amount}");
+    }
+}
+
+public class BankTransferPayment : IPayment
+{
+    public void ProcessPayment(double amount)
+    {
+        Console.WriteLine($"Processing bank transfer payment of {amount}");
+    }
+}
+
+
+
+public interface IDelivery
+{
+    void DeliverOrder(Order order);
+}
+
+public class CourierDelivery : IDelivery
+{
+    public void DeliverOrder(Order order)
+    {
+        Console.WriteLine("Delivering order by courier.");
+    }
+}
+
+public class PostDelivery : IDelivery
+{
+    public void DeliverOrder(Order order)
+    {
+        Console.WriteLine("Delivering order by post.");
+    }
+}
+
+public class PickUpPointDelivery : IDelivery
+{
+    public void DeliverOrder(Order order)
+    {
+        Console.WriteLine("Order is ready for pickup.");
+    }
+}
+
+
+
+public interface INotification
+{
+    void SendNotification(string message);
+}
+
+public class EmailNotification : INotification
+{
+    public void SendNotification(string message)
+    {
+        Console.WriteLine($"Sending email notification: {message}");
+    }
+}
+
+public class SmsNotification : INotification
+{
+    public void SendNotification(string message)
+    {
+        Console.WriteLine($"Sending SMS notification: {message}");
+    }
+}
+
+
+
+public interface IDiscountCalculator
+{
+    double ApplyDiscount(double total);
+}
+
+public class DiscountCalculator : IDiscountCalculator
+{
+    private readonly List<IDiscountRule> _rules;
+
+    public DiscountCalculator(List<IDiscountRule> rules)
+    {
+        _rules = rules;
+    }
+
+    public double ApplyDiscount(double total)
+    {
+        foreach (var rule in _rules)
+        {
+            total = rule.Apply(total);
+        }
+        return total;
+    }
+}
+
+public interface IDiscountRule
+{
+    double Apply(double total);
+}
+
+public class PercentageDiscountRule : IDiscountRule
+{
+    private readonly double _percentage;
+
+    public PercentageDiscountRule(double percentage)
+    {
+        _percentage = percentage;
+    }
+
+    public double Apply(double total)
+    {
+        return total - (total * _percentage / 100);
+    }
+}
+
+
+// MAIN
+class Program
+{
+    static void Main(string[] args)
+    {
+        // Создаем заказ
+        var order = new Order();
+        order.AddItem("Laptop", 1, 1200);
+        order.AddItem("Mouse", 2, 20);
+
+        // Устанавливаем методы оплаты и доставки
+        order.PaymentMethod = new CreditCardPayment();
+        order.DeliveryMethod = new CourierDelivery();
+
+        // Создаем правила скидок
+        var discountRules = new List<IDiscountRule>
+        {
+            new PercentageDiscountRule(10) // 10% скидка
+        };
+
+        var discountCalculator = new DiscountCalculator(discountRules);
+        double totalPrice = order.CalculateTotalPrice(discountCalculator);
+
+        // Обработка платежа
+        order.PaymentMethod.ProcessPayment(totalPrice);
+
+        // Доставка заказа
+        order.DeliveryMethod.DeliverOrder(order);
+
+        // Уведомления
+        INotification notification = new EmailNotification();
+        notification.SendNotification("Your order has been processed.");
+    }
+}
+
+
+
+
